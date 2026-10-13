@@ -11,7 +11,7 @@ This directory is a self-contained public source repository. Only its files go t
 3. Source pushes to `main` start the build automatically. You can also open Actions and manually run **Build Iman for AltStore**. It uses Apple's iPhone SDK on a cloud Mac, XcodeGen and `xcodebuild`; nothing installs Xcode on your laptop.
 4. Download **Iman-for-AltStore**. This contains an unsigned IPA. It cannot be installed directly until AltStore signs it.
 5. Install official AltServer on the Mac and AltStore Classic on the iPhone. Use your Apple Account only in AltServer/Apple's own login prompt, never in source, cloud secrets or chat. Enable Developer Mode and trust your own developer identity if requested.
-6. In AltStore, import the IPA. A free account requires refreshing the app within seven days; keep AltServer reachable over Wi-Fi/USB. These steps are not yet verified on this user's phone.
+6. In AltStore, import the IPA. A free account requires refreshing the app within seven days; keep AltServer reachable over Wi-Fi/USB. The user installed and paired the first build; each voice update still needs an on-device check.
 
 No Apple signing credentials belong in the cloud build. The workflow runs for source changes on `main` or a manual request, has a 20-minute timeout and stores artifacts for only three days. A successful cloud compile and a real device test are required before claiming the iPhone app works.
 
@@ -36,3 +36,9 @@ Try `Hi Iman`, `Give me a kiss`, then `Open Calculator`. Short replies appear on
 
 Sources: https://faq.altstore.io/altstore-classic/how-to-install-altstore-macos
 https://docs.github.com/en/billing/concepts/product-billing/github-actions
+
+## Hands-free mode (1.1)
+
+After pairing, enable **Hands-free · Hi Iman**. Say “Hi Iman” followed by one command; a 1.4-second pause sends it. New words reset the pause. Ordinary speech without the wake phrase is not sent. Recognition stays on-device, pauses while the Mac works, and turns off if Iman leaves the foreground or loses its connection. Enable it again when returning. The sun button can keep the visible face awake; no background or lock-screen listening is enabled.
+
+`WakePhrase` parses only a leading greeting. `HandsFreeSession` owns pause timing, cancellation and connection lifecycle separately from `VoiceInput`. Manual review/send is still available when hands-free mode is off.

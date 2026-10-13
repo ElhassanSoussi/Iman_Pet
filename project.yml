@@ -22,13 +22,15 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.elhassan.iman.companion
         PRODUCT_NAME: Iman
-        MARKETING_VERSION: "0.2.0"
+        MARKETING_VERSION: "1.1.0"
         CURRENT_PROJECT_VERSION: "2"
         GENERATE_INFOPLIST_FILE: NO
     info:
       path: Generated/Info.plist
       properties:
         CFBundleDisplayName: Iman
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         UILaunchScreen: {}
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false

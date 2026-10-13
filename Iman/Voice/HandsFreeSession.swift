@@ -46,8 +46,8 @@ import Combine
   restart?.cancel();let current=generation
   restart=Task{[weak self] in
    do{try await Task.sleep(nanoseconds:500_000_000)}catch{return}
-   guard let self=self,self.generation==current,self.enabled,self.foreground,self.mac?.busy==false else{return}
-   self.gate.reset();await self.voice?.start()
+   guard let self=self,self.generation==current,self.enabled,self.foreground,self.mac?.busy==false,self.mac?.paired==true else{return}
+   self.gate.reset();self.status="Listening for ‘Hi Iman’…";await self.voice?.start()
    if let error=self.voice?.error,!error.isEmpty{self.setEnabled(false);self.status=error}
   }
  }

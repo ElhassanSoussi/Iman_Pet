@@ -39,7 +39,7 @@ struct CompanionScreen:View {
     Toggle("Hands-free · Hi Iman",isOn:Binding(get:{handsFree.enabled},set:{handsFree.setEnabled($0)}))
      .disabled(!mac.paired).padding(.horizontal,24).accessibilityHint("Listens on this device only while Iman is open. Sends your request after a pause.")
     if handsFree.enabled || !handsFree.status.isEmpty{Text(handsFree.status).font(.caption).multilineTextAlignment(.center).padding(.horizontal,24)}
-    Text(mac.busy ? "Working on your Mac" : "Tap to talk · Review your words · Send").font(.caption2).foregroundStyle(.secondary)
+    Text(mac.busy ? "Working on your Mac" : handsFree.enabled ? "Hi Iman + request · Pause to send" : "Tap to talk · Review your words · Send").font(.caption2).foregroundStyle(.secondary)
    }.padding(.vertical,12)
   }.background(LinearGradient(colors:[Color(red:0.02,green:0.04,blue:0.09),Color(red:0.02,green:0.12,blue:0.20)],startPoint:.top,endPoint:.bottom).ignoresSafeArea())
    .foregroundStyle(.white).tint(.cyan).preferredColorScheme(.dark)
@@ -47,7 +47,7 @@ struct CompanionScreen:View {
    .onAppear{handsFree.configure(voice:voice,mac:mac)}
    .onChange(of:voice.text){draft=$0;handsFree.heard($0)}
    .onChange(of:voice.listening){handsFree.listeningChanged($0)}
-   .onChange(of:mac.busy){_ in handsFree.busyChanged()}
+   .onChange(of:mac.busy){busy in if busy && handsFree.enabled{draft=""};handsFree.busyChanged()}
    .onChange(of:mac.paired){paired in if !paired{handsFree.setEnabled(false)}}
    .onChange(of:phase){value in handsFree.setForeground(value == .active);if value != .active{voice.stop()};updateAwake()}
    .onDisappear{handsFree.setEnabled(false);voice.stop();UIApplication.shared.isIdleTimerDisabled=false}
