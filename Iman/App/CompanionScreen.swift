@@ -3,6 +3,7 @@ import SwiftUI
 struct CompanionScreen:View {
  @StateObject private var mac=MacConnection()
  @StateObject private var voice=VoiceInput()
+ @StateObject private var handsFree=HandsFreeSession()
  @Environment(\.scenePhase) private var phase
  @State private var connection=false
  @State private var keyboard=false
@@ -35,16 +36,24 @@ struct CompanionScreen:View {
      if mac.busy{Button{mac.stop()}label:{Image(systemName:"stop.fill").font(.title2)}.accessibilityLabel("Stop request")}
      else{Button{awake.toggle();updateAwake()}label:{Image(systemName:awake ? "sun.max.fill":"moon").font(.title2)}.accessibilityLabel(awake ? "Allow screen sleep":"Keep screen awake")}
     }.padding(.bottom,12)
+    Toggle("Hands-free · Hi Iman",isOn:Binding(get:{handsFree.enabled},set:{handsFree.setEnabled($0)}))
+     .disabled(!mac.paired).padding(.horizontal,24).accessibilityHint("Listens on this device only while Iman is open. Sends your request after a pause.")
+    if handsFree.enabled || !handsFree.status.isEmpty{Text(handsFree.status).font(.caption).multilineTextAlignment(.center).padding(.horizontal,24)}
     Text(mac.busy ? "Working on your Mac" : "Tap to talk · Review your words · Send").font(.caption2).foregroundStyle(.secondary)
    }.padding(.vertical,12)
   }.background(LinearGradient(colors:[Color(red:0.02,green:0.04,blue:0.09),Color(red:0.02,green:0.12,blue:0.20)],startPoint:.top,endPoint:.bottom).ignoresSafeArea())
    .foregroundStyle(.white).tint(.cyan).preferredColorScheme(.dark)
    .sheet(isPresented:$connection){ConnectionScreen(mac:mac)}
-   .onChange(of:voice.text){draft=$0}
-   .onChange(of:phase){value in if value != .active{voice.stop()};updateAwake()}
-   .onDisappear{voice.stop();UIApplication.shared.isIdleTimerDisabled=false}
+   .onAppear{handsFree.configure(voice:voice,mac:mac)}
+   .onChange(of:voice.text){draft=$0;handsFree.heard($0)}
+   .onChange(of:voice.listening){handsFree.listeningChanged($0)}
+   .onChange(of:mac.busy){_ in handsFree.busyChanged()}
+   .onChange(of:mac.paired){paired in if !paired{handsFree.setEnabled(false)}}
+   .onChange(of:phase){value in handsFree.setForeground(value == .active);if value != .active{voice.stop()};updateAwake()}
+   .onDisappear{handsFree.setEnabled(false);voice.stop();UIApplication.shared.isIdleTimerDisabled=false}
  }
  private func microphone(){
+  if handsFree.enabled{handsFree.setEnabled(false);return}
   guard mac.paired else{connection=true;return}
   if voice.listening{voice.finish()}else{Task{await voice.start()}}
  }
