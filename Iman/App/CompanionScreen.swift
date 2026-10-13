@@ -11,42 +11,46 @@ struct CompanionScreen:View {
  @State private var awake=false
  var body:some View {
   GeometryReader { geometry in
+   ScrollView {
    VStack(spacing:8){
     HStack {
      Text("Iman").font(.system(.headline,design:.rounded));Spacer()
      Button{connection=true}label:{Image(systemName:mac.paired ? "link.circle.fill":"link.circle").font(.title2)}.accessibilityLabel("Connect to Mac")
     }.padding(.horizontal,24)
     Spacer(minLength:0)
-    ImanFace(emotion:voice.listening ? "listening":mac.reaction).frame(maxHeight:geometry.size.height*0.62)
+    ImanFace(emotion:voice.listening ? "listening":mac.reaction).frame(height:max(100,geometry.size.height*(keyboard || !draft.isEmpty || voice.active ? 0.28:0.55)))
      .contentShape(Rectangle()).onTapGesture{microphone()}
     Text(voice.listening ? "Listening…":mac.status).font(.system(.title3,design:.rounded)).multilineTextAlignment(.center).lineLimit(4).padding(.horizontal,24)
     if !voice.error.isEmpty{Text(voice.error).font(.caption).foregroundStyle(.orange).padding(.horizontal,24)}
     Spacer(minLength:0)
-    if keyboard || !draft.isEmpty {
-     HStack(alignment:.bottom){
-      TextField("Say or type something…",text:$draft,axis:.vertical).lineLimit(1...3).textFieldStyle(.plain)
-       .onChange(of:draft){value in if value.count>600{draft=String(value.prefix(600))}}
-      Button{voice.stop();mac.send(draft);draft=""}label:{Image(systemName:"arrow.up.circle.fill").font(.title)}
-       .disabled(!mac.paired || mac.busy || voice.listening || voice.preparing || draft.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty)
-     }.padding(16).background(.white.opacity(0.07),in:RoundedRectangle(cornerRadius:22)).padding(.horizontal,20)
+    if keyboard || !draft.isEmpty || voice.active {
+     TranscriptReview(draft:$draft,capturing:voice.active,finalizing:voice.finalizing,
+      canSend:mac.paired && !mac.busy,alternatives:reviewAlternatives,send:sendDraft,retry:recordAgain,discard:discardDraft)
+      .padding(.horizontal,20)
     }
     HStack(spacing:30){
-     Button{keyboard.toggle()}label:{Image(systemName:"keyboard").font(.title2)}.accessibilityLabel("Type a message")
-     Button(action:microphone){Image(systemName:voice.listening ? "stop.circle.fill":"mic.circle.fill").font(.system(size:62))}.accessibilityLabel(voice.listening ? "Finish listening":"Talk to Iman").disabled(mac.busy || voice.preparing)
+     Button{handsFree.setEnabled(false);voice.stop();keyboard=true}label:{Image(systemName:"keyboard").font(.title2)}.accessibilityLabel("Type a message")
+     Button(action:microphone){Image(systemName:voice.listening ? "stop.circle.fill":"mic.circle.fill").font(.system(size:62))}.accessibilityLabel(voice.listening ? "Finish listening":"Talk to Iman").disabled(mac.busy || voice.preparing || voice.finalizing)
      if mac.busy{Button{mac.stop()}label:{Image(systemName:"stop.fill").font(.title2)}.accessibilityLabel("Stop request")}
      else{Button{awake.toggle();updateAwake()}label:{Image(systemName:awake ? "sun.max.fill":"moon").font(.title2)}.accessibilityLabel(awake ? "Allow screen sleep":"Keep screen awake")}
     }.padding(.bottom,12)
     Toggle("Hands-free · Hi Iman",isOn:Binding(get:{handsFree.enabled},set:{handsFree.setEnabled($0)}))
-     .disabled(!mac.paired).padding(.horizontal,24).accessibilityHint("Listens on this device only while Iman is open. Sends your request after a pause.")
+     .disabled(!mac.paired).padding(.horizontal,24).accessibilityHint("Listens on this device while Iman is open, then pauses for you to review your words.")
+    if handsFree.enabled {
+     Toggle("Send automatically after a pause",isOn:$handsFree.sendAutomatically)
+      .font(.caption).padding(.horizontal,24)
+    }
     if handsFree.enabled || !handsFree.status.isEmpty{Text(handsFree.status).font(.caption).multilineTextAlignment(.center).padding(.horizontal,24)}
-    Text(mac.busy ? "Working on your Mac" : handsFree.enabled ? "Hi Iman + request · Pause to send" : "Tap to talk · Review your words · Send").font(.caption2).foregroundStyle(.secondary)
-   }.padding(.vertical,12)
+    Text(mac.busy ? "Working on your Mac" : handsFree.enabled ? (handsFree.sendAutomatically ? "Hi Iman + request · Automatic send on":"Hi Iman + request · Review before sending") : "Tap to talk · Review your words · Send").font(.caption2).foregroundStyle(.secondary)
+   }.padding(.vertical,12).frame(minHeight:geometry.size.height)
+   }.scrollDismissesKeyboard(.interactively)
   }.background(LinearGradient(colors:[Color(red:0.02,green:0.04,blue:0.09),Color(red:0.02,green:0.12,blue:0.20)],startPoint:.top,endPoint:.bottom).ignoresSafeArea())
    .foregroundStyle(.white).tint(.cyan).preferredColorScheme(.dark)
    .sheet(isPresented:$connection){ConnectionScreen(mac:mac)}
    .onAppear{handsFree.configure(voice:voice,mac:mac)}
    .onChange(of:voice.text){draft=$0;handsFree.heard($0)}
-   .onChange(of:voice.listening){handsFree.listeningChanged($0)}
+   .onChange(of:handsFree.review){if let text=$0{draft=text}}
+   .onChange(of:voice.active){handsFree.captureChanged($0)}
    .onChange(of:mac.busy){busy in if busy && handsFree.enabled{draft=""};handsFree.busyChanged()}
    .onChange(of:mac.paired){paired in if !paired{handsFree.setEnabled(false)}}
    .onChange(of:phase){value in handsFree.setForeground(value == .active);if value != .active{voice.stop()};updateAwake()}
@@ -55,8 +59,25 @@ struct CompanionScreen:View {
  private func microphone(){
   if handsFree.enabled{handsFree.setEnabled(false);return}
   guard mac.paired else{connection=true;return}
-  if voice.listening{voice.finish()}else{Task{await voice.start()}}
+  if voice.listening{voice.finish()}else if !voice.active{Task{await voice.start()}}
  }
+ private var reviewAlternatives:[String]{
+  let options=voice.alternatives.map{value -> String in
+   guard handsFree.review != nil else{return value}
+   var gate=WakePhrase();gate.update(value);return gate.consume() ?? value
+  }
+  return TranscriptOptions.unique(options,excluding:draft)
+ }
+ private func sendDraft(){
+  guard mac.paired,!mac.busy,!voice.active,!draft.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty else{return}
+  voice.stop();handsFree.dismissReview(resumeListening:false);mac.send(draft);draft=""
+ }
+ private func recordAgain(){
+  guard !mac.busy,!voice.active else{return}
+  draft=""
+  if handsFree.enabled{handsFree.dismissReview()}else{Task{await voice.start()}}
+ }
+ private func discardDraft(){draft="";keyboard=false;handsFree.dismissReview()}
  private func updateAwake(){UIApplication.shared.isIdleTimerDisabled=awake && phase == .active}
 }
 

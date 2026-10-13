@@ -7,6 +7,7 @@ on:
       - "Iman/**"
       - "project.yml"
       - "scripts/**"
+      - "Tests/**"
       - ".github/workflows/ios-build.yml"
 permissions:
   contents: read
@@ -23,6 +24,8 @@ jobs:
           persist-credentials: false
       - name: Install project generator on cloud Mac
         run: brew install xcodegen
+      - name: Test voice review lifecycle
+        run: bash scripts/test-voice.sh
       - name: Build unsigned iPhone app
         run: bash scripts/build-unsigned.sh
       - uses: actions/upload-artifact@v4

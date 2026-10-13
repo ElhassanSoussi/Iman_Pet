@@ -22,8 +22,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.elhassan.iman.companion
         PRODUCT_NAME: Iman
-        MARKETING_VERSION: "1.1.0"
-        CURRENT_PROJECT_VERSION: "2"
+        MARKETING_VERSION: "1.2.0"
+        CURRENT_PROJECT_VERSION: "3"
         GENERATE_INFOPLIST_FILE: NO
     info:
       path: Generated/Info.plist
@@ -34,7 +34,7 @@ targets:
         UILaunchScreen: {}
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
-        NSMicrophoneUsageDescription: Iman listens when you tap the microphone or enable foreground hands-free mode. Hands-free requests beginning with Hi Iman go to your Mac after a pause.
+        NSMicrophoneUsageDescription: Iman listens when you tap the microphone or enable foreground hands-free mode. You review your words before sending unless you enable automatic send.
         NSSpeechRecognitionUsageDescription: Iman uses offline English speech recognition to turn your voice into text.
         NSCameraUsageDescription: Scan the private connection code displayed by Iman on your Mac.
         NSLocalNetworkUsageDescription: Send your commands directly to Iman on your Mac over your private Wi-Fi.

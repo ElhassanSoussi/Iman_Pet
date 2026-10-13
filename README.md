@@ -37,8 +37,12 @@ Try `Hi Iman`, `Give me a kiss`, then `Open Calculator`. Short replies appear on
 Sources: https://faq.altstore.io/altstore-classic/how-to-install-altstore-macos
 https://docs.github.com/en/billing/concepts/product-billing/github-actions
 
-## Hands-free mode (1.1)
+## Voice review (1.2)
 
-After pairing, enable **Hands-free · Hi Iman**. Say “Hi Iman” followed by one command; a 1.4-second pause sends it. New words reset the pause. Ordinary speech without the wake phrase is not sent. Recognition stays on-device, pauses while the Mac works, and turns off if Iman leaves the foreground or loses its connection. Enable it again when returning. The sun button can keep the visible face awake; no background or lock-screen listening is enabled.
+Tap the microphone, speak, then tap Stop. Capture runs for at most 30 seconds and allows up to three more seconds for final recognition. The message box stays locked while recognition finishes, so late words cannot overwrite your edits. Tap **Check what I heard** to edit the text, choose **Other words I heard** if the recognizer offers alternatives, or **Record again**. **Send to Mac** sends exactly the displayed text. The existing pet artwork is unchanged.
 
-`WakePhrase` parses only a leading greeting. `HandsFreeSession` owns pause timing, cancellation and connection lifecycle separately from `VoiceInput`. Manual review/send is still available when hands-free mode is off.
+After pairing, enable **Hands-free · Hi Iman**. Say “Hi Iman” followed by one command. A 1.8-second pause finishes capture and opens review by default. The microphone stays paused while you correct the text. An explicit **Send automatically after a pause** toggle restores automatic sending for finalized recognition only. Partial results always require review. Ordinary speech without the wake phrase is not sent. Leaving the app, losing the Mac connection or starting a Mac task stops capture.
+
+Recognition remains on-device English. Short app vocabulary hints include Iman and ChatGPT; dictation task hints and punctuation are enabled. These hints do not guarantee correct recognition. Iman does not silently change “run into” to “rain in two”: correction belongs in the visible draft. Audio is not stored. Source: [Apple speech recognition configuration](https://developer.apple.com/documentation/speech/sfspeechrecognitionrequest).
+
+Run `bash scripts/test-voice.sh` on macOS for lifecycle checks with a fake recognizer: late final words, pause reset, review lock, final-only auto-send, partial fallback, busy/background cancellation and bounded alternatives. The cloud workflow runs these checks before compiling the iOS app. Actual microphone quality and the review layout still need an iPhone test after installing the new IPA.
